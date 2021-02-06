@@ -5,7 +5,7 @@ include gro
 
 // define timesteps and a file where the information is saved
 set ("dt", 0.1);
-fp := fopen ( "D:/Users/avale/Documentos/parasito.csv", "w" );
+fp := fopen ( "path", "w" );
 
 // the two signals: the bacteria that produce exoenzymes produce ahl_anfitrion and the bacteria that don't produce exoenzymes produce ahl_parasito
 ahl_anfitrion := signal(1, 0.25);
