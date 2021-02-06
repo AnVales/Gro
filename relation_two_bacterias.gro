@@ -1,0 +1,141 @@
+// Biología programable: 
+// Modelo de interacción entre dos especies bacterianas a través de los recursos con Gro
+
+include gro
+
+// define timesteps and a file where the information is saved
+set ("dt", 0.1);
+fp := fopen ( "D:/Users/avale/Documentos/parasito.csv", "w" );
+
+// the two signals: the bacteria that produce exoenzymes produce ahl_anfitrion and the bacteria that don't produce exoenzymes produce ahl_parasito
+ahl_anfitrion := signal(1, 0.25);
+ahl_parasito := signal(1, 0.25);
+
+// program to define the bacteria that produce exoenzymes
+program anfitrion(k,delta) := {
+
+    // initial conditions for the bacteria
+    gfp := 0;
+    set ( "ecoli_growth_rate",  0.015);
+    set ( "ecoli_division_size_mean",  2.35);
+    set ( "ecoli_division_size_variance",  0.01);
+
+    // some information can be studied while the simulation takes place
+    selected & just_divided :{
+        print ( "After division, cell ", id, " has ", gfp, " gfp molecules ")
+    }
+
+    // the exoenzymes and the comunication between bacteria 
+    true : {
+        emit_signal(ahl_anfitrion,0.2)
+    }
+
+    // the bacteria detects that there are more bacteria that produce exoenzymes
+    true : {
+        absorb_signal(ahl_anfitrion,0.1)
+    }
+
+    // the liberation of exoenzymes and comunication increases with bacteria that produce exoenzymes
+    rate(k*get_signal(ahl_anfitrion)) : {
+        emit_signal(ahl_anfitrion,0.2)
+    }
+
+    // the bacteria detects that there are bacteria that don't produce exoenzymes
+    true : {
+        absorb_signal(ahl_parasito,0.1)
+    }
+
+    // this is a way to detect how many bacteria that don't produce exoenzymes are near of the cell
+    // if the bacteria detect them, it produces gfp
+    // if gfp > 2, the bacteria grows slower
+    // if gfp > 10, the bacteria dies
+
+    rate(k*get_signal(ahl_parasito)) : {
+        gfp := gfp + 1
+    }
+
+    gfp > 2 : {
+        set ( "ecoli_growth_rate",  0.0075);
+    };
+
+    gfp > 10 : {
+        die()
+    };
+
+    // a reporter to save data in a csv file
+    p := [ t := 0, s := 0 ];
+
+//  true : {
+//    p.t := p.t + dt,
+//    p.s := p.s + dt
+//  }
+//
+//  p.s >= delta : {
+//    fprint ( fp, id, ", ", p.t, ", ", gfp, "\n" ),
+//    p.s := 0
+//  }
+
+};
+
+// program to define the bacteria that doesn't produce exoenzymes
+program parasito(k,delta) := {
+
+    // initial conditions for the bacteria
+    gfp := 30;
+    set ( "ecoli_growth_rate",  0.01);
+    set ( "ecoli_division_size_mean",  2.35);
+    set ( "ecoli_division_size_variance",  0.01);
+
+    // some information can be studied while the simulation takes place
+    selected & just_divided :{
+        print ( "After division, cell ", id, " has ", gfp, " gfp molecules ")
+    }
+
+    // parasites are detected
+    true : {
+        emit_signal(ahl_parasito, 0.2)
+    }
+
+    // parasites detect that there are bacteria that produce exoenzymes
+    true : {
+        absorb_signal(ahl_anfitrion,0.1)
+    }
+
+    // this is a way to control if they obtain nutrients
+    // if they are near of a bacteria that produce exoenzymes, they produce gfp
+    // every timestep, gfp decreases
+    // if gfp > 7, the growth rate increases
+    // if gfp < 1, the bacteria die
+
+    rate(k*get_signal(ahl_anfitrion)) : {
+        gfp := gfp + 2
+    }
+
+    gfp := gfp - 1;
+
+    gfp > 7 : {
+        set ( "ecoli_growth_rate",  0.015);
+    }
+
+    gfp < 1 : {
+        die()
+    };
+
+    // a reporter to save data in a csv file
+    //p := [ t := 0, s := 0 ];
+
+    //true : {
+    //    p.t := p.t + dt,
+    //    p.s := p.s + dt
+    //}
+
+    //p.s >= delta : {
+    //    fprint ( fp, id, ", ", p.t, ", ", gfp, "\n" ),
+    //    p.s := 0
+    //}
+
+};
+
+// begin with two cells, one that produce exoenzymes and other that doesn't produce them
+ecoli ( [x:=50,theta:=3.14/2], program anfitrion(2, 2) );
+ecoli ( [x:=-50], program parasito(2, 2) );
